@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사다리 타기 게임</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Black+Han+Sans&display=swap');
+
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1830;
+    --accent1: #ff6b6b;
+    --accent2: #ffd93d;
+    --accent3: #6bcb77;
+    --accent4: #4d96ff;
+    --text: #fffffe;
+    --muted: #a7a9be;
+    --border: #2e2c4a;
+    --glow: rgba(255, 107, 107, 0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nanum Gothic', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .stars {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse at 20% 30%, rgba(77, 150, 255, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 70%, rgba(255, 107, 107, 0.06) 0%, transparent 60%);
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .title {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 2.2rem;
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, var(--accent2) 0%, var(--accent1) 50%, #ff9f9f 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 18px rgba(255, 217, 61, 0.4));
+    white-space: nowrap;
+  }
+
+  .btn-group { display: flex; gap: 12px; }
+
+  .btn {
+    font-family: 'Nanum Gothic', sans-serif;
+    font-weight: 800;
+    font-size: 0.95rem;
+    padding: 10px 22px;
+    border: 2px solid;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn:hover::before { opacity: 1; }
+
+  .btn-install {
+    background: var(--surface);
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+  .btn-install::before { background: rgba(255, 217, 61, 0.12); }
+  .btn-install:hover { box-shadow: 0 0 14px rgba(255, 217, 61, 0.5); transform: translateY(-1px); }
+  .btn-install:active { transform: translateY(0); }
+
+  .btn-check {
+    background: var(--surface);
+    border-color: var(--accent4);
+    color: var(--accent4);
+  }
+  .btn-check::before { background: rgba(77, 150, 255, 0.12); }
+  .btn-check:hover { box-shadow: 0 0 14px rgba(77, 150, 255, 0.5); transform: translateY(-1px); }
+  .btn-check:active { transform: translateY(0); }
+  .btn-check:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .status-msg {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-left: auto;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  /* Game area */
+  .game-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 20px 24px;
+    position: relative;
+    box-shadow: 0 4px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  /* Name inputs row */
+  .names-row {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 16px;
+    padding: 0 10px;
+  }
+
+  .name-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 110px;
+  }
+
+  .name-input {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Nanum Gothic', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 7px 6px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .name-input:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 8px rgba(255, 217, 61, 0.3);
+  }
+
+  .name-input::placeholder { color: #555; }
+
+  /* Canvas */
+  #ladderCanvas {
+    display: block;
+    width: 100%;
+    height: 340px;
+    border-radius: 8px;
+  }
+
+  /* Gifts row */
+  .gifts-row {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 14px;
+    padding: 0 10px;
+  }
+
+  .gift-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 110px;
+    gap: 4px;
+  }
+
+  .gift-box {
+    width: 64px;
+    height: 64px;
+    position: relative;
+    cursor: default;
+    transition: transform 0.3s;
+  }
+
+  .gift-svg { width: 100%; height: 100%; }
+
+  .gift-result {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all 0.4s;
+    min-height: 20px;
+    letter-spacing: 0.03em;
+  }
+
+  .gift-result.show { opacity: 1; transform: translateY(0); }
+  .gift-result.win { color: var(--accent2); font-size: 0.9rem; }
+  .gift-result.lose { color: var(--muted); }
+
+  .gift-box.opened .gift-svg { opacity: 0; transform: scale(0.5); transition: all 0.4s; }
+  .gift-box.boom { animation: boom 0.5s ease-out; }
+
+  @keyframes boom {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.4) rotate(-5deg); }
+    60% { transform: scale(0.8) rotate(5deg); }
+    100% { transform: scale(0); opacity: 0; }
+  }
+
+  /* Confetti container */
+  .confetti-wrap {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1000;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    width: 8px; height: 12px;
+    border-radius: 2px;
+    animation: fall linear forwards;
+  }
+
+  @keyframes fall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stars"></div>
+
+<div class="container">
+  <div class="header">
+    <div class="title">🎰 사다리 타기 게임</div>
+    <div class="btn-group">
+      <button class="btn btn-install" id="btnInstall">사다리 설치</button>
+      <button class="btn btn-check" id="btnCheck" disabled>사다리 확인</button>
+    </div>
+    <div class="status-msg" id="statusMsg">이름을 입력하고 사다리를 설치하세요</div>
+  </div>
+
+  <div class="game-wrap">
+    <!-- Name inputs -->
+    <div class="names-row" id="namesRow"></div>
+
+    <!-- Ladder canvas -->
+    <canvas id="ladderCanvas"></canvas>
+
+    <!-- Gift boxes -->
+    <div class="gifts-row" id="giftsRow"></div>
+  </div>
+</div>
+
+<div class="confetti-wrap" id="confettiWrap"></div>
+
+<script>
+const NUM = 7;
+const COLORS = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff9f7f','#c77dff','#00c9a7'];
+
+// State
+let horizontals = []; // [{col, y}] pairs connecting col and col+1
+let results = [];     // ['당첨' or '미당첨'] length 7, indexed by bottom column
+let installed = false;
+let checkIdx = 0;
+let animating = false;
+let paths = []; // revealed paths
+let giftAssigned = false;
+
+// Build UI
+const namesRow = document.getElementById('namesRow');
+const giftsRow = document.getElementById('giftsRow');
+const inputs = [];
+const giftCols = [];
+
+for (let i = 0; i < NUM; i++) {
+  // Name input
+  const col = document.createElement('div');
+  col.className = 'name-col';
+  const inp = document.createElement('input');
+  inp.className = 'name-input';
+  inp.maxLength = 5;
+  inp.placeholder = `이름 ${i+1}`;
+  inp.type = 'text';
+  col.appendChild(inp);
+  namesRow.appendChild(col);
+  inputs.push(inp);
+
+  // Gift col
+  const gc = document.createElement('div');
+  gc.className = 'gift-col';
+
+  const gb = document.createElement('div');
+  gb.className = 'gift-box';
+  gb.id = `gift${i}`;
+  gb.innerHTML = giftSVG(i);
+
+  const gr = document.createElement('div');
+  gr.className = 'gift-result';
+  gr.id = `result${i}`;
+
+  gc.appendChild(gb);
+  gc.appendChild(gr);
+  giftsRow.appendChild(gc);
+  giftCols.push({ box: gb, result: gr });
+}
+
+function giftSVG(idx) {
+  const boxColors = [
+    ['#e63946','#c1121f'],['#f4a261','#e76f51'],['#2a9d8f','#21867a'],
+    ['#457b9d','#1d3557'],['#9b5de5','#7b2d8b'],['#f15bb5','#c5155f'],['#00bbf9','#0077b6']
+  ];
+  const [c1, c2] = boxColors[idx];
+  return `<svg class="gift-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <!-- box body -->
+    <rect x="6" y="28" width="52" height="30" rx="3" fill="${c1}"/>
+    <rect x="6" y="28" width="52" height="30" rx="3" fill="url(#sh${idx})"/>
+    <!-- lid -->
+    <rect x="4" y="22" width="56" height="10" rx="3" fill="${c2}"/>
+    <!-- ribbon vertical -->
+    <rect x="28" y="22" width="8" height="36" fill="white" opacity="0.85"/>
+    <!-- ribbon horizontal on lid -->
+    <rect x="4" y="26" width="56" height="4" fill="white" opacity="0.85"/>
+    <!-- bow left loop -->
+    <ellipse cx="24" cy="20" rx="10" ry="7" fill="white" opacity="0.9" transform="rotate(-20,24,20)"/>
+    <!-- bow right loop -->
+    <ellipse cx="40" cy="20" rx="10" ry="7" fill="white" opacity="0.9" transform="rotate(20,40,20)"/>
+    <!-- bow center -->
+    <circle cx="32" cy="21" r="5" fill="${c2}"/>
+    <defs>
+      <linearGradient id="sh${idx}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="rgba(0,0,0,0)"/>
+        <stop offset="1" stop-color="rgba(0,0,0,0.25)"/>
+      </linearGradient>
+    </defs>
+  </svg>`;
+}
+
+// Canvas setup
+const canvas = document.getElementById('ladderCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth - 40;
+  canvas.height = 340;
+  draw();
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function getLayout() {
+  const W = canvas.width, H = canvas.height;
+  const margin = 55;
+  const step = (W - margin * 2) / (NUM - 1);
+  const xOf = i => margin + i * step;
+  const yTop = 10, yBot = H - 10;
+  return { W, H, margin, step, xOf, yTop, yBot };
+}
+
+function draw() {
+  const { W, H, xOf, yTop, yBot } = getLayout();
+  ctx.clearRect(0, 0, W, H);
+
+  // Vertical lines
+  for (let i = 0; i < NUM; i++) {
+    ctx.beginPath();
+    ctx.moveTo(xOf(i), yTop);
+    ctx.lineTo(xOf(i), yBot);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  }
+
+  // Horizontals
+  for (const h of horizontals) {
+    ctx.beginPath();
+    ctx.moveTo(xOf(h.col), h.y);
+    ctx.lineTo(xOf(h.col + 1), h.y);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  // Revealed paths
+  for (const p of paths) {
+    drawPath(p.segments, p.color, p.alpha);
+  }
+}
+
+function drawPath(segments, color, alpha) {
+  if (!segments || segments.length < 2) return;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.globalAlpha = alpha;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.moveTo(segments[0].x, segments[0].y);
+  for (let i = 1; i < segments.length; i++) {
+    ctx.lineTo(segments[i].x, segments[i].y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Generate horizontals: 5~9 rungs per gap (between adjacent columns)
+function generateHorizontals() {
+  const { yTop, yBot } = getLayout();
+  const newH = [];
+
+  // Use enough zones so we can fit up to 9 per gap without crowding
+  // Each gap gets its own independent zone grid to guarantee 5~9 rungs
+  const H_ZONES = 36; // fine-grained slots across full height
+  const zoneH = (yBot - yTop) / H_ZONES;
+
+  // occupied[zone] = set of cols that already have a rung AT that zone
+  // Rule: same zone cannot have two adjacent-gap rungs (would form a Z shape on same row)
+  const occupiedZones = {}; // zone -> Set of cols
+
+  for (let col = 0; col < NUM - 1; col++) {
+    const target = Math.floor(Math.random() * 5) + 5; // 5~9
+    let placed = 0, tries = 0;
+    while (placed < target && tries < 300) {
+      tries++;
+      const zone = Math.floor(Math.random() * H_ZONES);
+      // No neighbor-gap conflict: col-1 gap or col+1 gap cannot share same zone
+      const colSet = occupiedZones[zone] || new Set();
+      if (!colSet.has(col) && !colSet.has(col - 1) && !colSet.has(col + 1)) {
+        if (!occupiedZones[zone]) occupiedZones[zone] = new Set();
+        occupiedZones[zone].add(col);
+        newH.push({ col, y: yTop + (zone + 0.5) * zoneH });
+        placed++;
+      }
+    }
+  }
+
+  horizontals = newH;
+}
+
+// Assign results (only on first install)
+function assignResults() {
+  results = Array(NUM).fill('미당첨');
+  const winIdx = Math.floor(Math.random() * NUM);
+  results[winIdx] = '당첨';
+}
+
+// Trace path for column startCol
+function tracePath(startCol) {
+  const { xOf, yTop, yBot } = getLayout();
+  const segments = [];
+  let col = startCol;
+  segments.push({ x: xOf(col), y: yTop });
+
+  // Sort horizontals by y ascending
+  const sorted = [...horizontals].sort((a, b) => a.y - b.y);
+
+  let prevY = yTop;
+
+  for (let guard = 0; guard < 500; guard++) {
+    // Find the shallowest horizontal STRICTLY below prevY that touches current col
+    const next = sorted.find(h => h.y > prevY + 0.1 && (h.col === col || h.col === col - 1));
+
+    if (!next) {
+      // No more rungs — go straight to bottom
+      segments.push({ x: xOf(col), y: yBot });
+      break;
+    }
+
+    // Walk down to this rung
+    segments.push({ x: xOf(col), y: next.y });
+
+    // Cross the rung
+    if (next.col === col) {
+      col = col + 1; // rung goes right
+    } else {
+      col = col - 1; // rung goes left (next.col === col-1)
+    }
+    segments.push({ x: xOf(col), y: next.y });
+
+    prevY = next.y;
+  }
+
+  return { segments, endCol: col };
+}
+
+// Animate path reveal
+function animatePath(segments, color, onComplete) {
+  const totalLen = segments.reduce((acc, s, i) => {
+    if (i === 0) return 0;
+    const prev = segments[i-1];
+    return acc + Math.hypot(s.x - prev.x, s.y - prev.y);
+  }, 0);
+
+  // Guard: if path has no length somehow, finish immediately
+  if (totalLen < 1) {
+    paths.push({ segments, color, alpha: 0.7 });
+    draw();
+    onComplete();
+    return;
+  }
+
+  const speed = 280; // px/sec
+  const duration = (totalLen / speed) * 1000;
+  const startTime = performance.now();
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // Find how far along the segments we are
+    const targetLen = totalLen * progress;
+    let accLen = 0;
+    const drawn = [segments[0]];
+
+    for (let i = 1; i < segments.length; i++) {
+      const prev = segments[i-1];
+      const cur = segments[i];
+      const segLen = Math.hypot(cur.x - prev.x, cur.y - prev.y);
+      if (accLen + segLen >= targetLen) {
+        const t = (targetLen - accLen) / segLen;
+        drawn.push({ x: prev.x + (cur.x - prev.x) * t, y: prev.y + (cur.y - prev.y) * t });
+        break;
+      }
+      accLen += segLen;
+      drawn.push(cur);
+    }
+
+    draw();
+    // Draw this path so far
+    drawPath(drawn, color, 1);
+
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      // Finalize
+      paths.push({ segments, color, alpha: 0.7 });
+      draw();
+      onComplete();
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
+// Buttons
+const btnInstall = document.getElementById('btnInstall');
+const btnCheck = document.getElementById('btnCheck');
+const statusMsg = document.getElementById('statusMsg');
+
+btnInstall.addEventListener('click', () => {
+  if (animating) return;
+  generateHorizontals();
+  if (!giftAssigned) {
+    assignResults();
+    giftAssigned = true;
+  }
+  installed = true;
+  checkIdx = 0;
+  paths = [];
+  // Reset gifts visually
+  for (let i = 0; i < NUM; i++) {
+    const gb = document.getElementById(`gift${i}`);
+    const gr = document.getElementById(`result${i}`);
+    gb.className = 'gift-box';
+    gb.innerHTML = giftSVG(i);
+    gb.style.opacity = '1';
+    gb.style.transform = '';
+    gr.className = 'gift-result';
+    gr.textContent = '';
+  }
+  draw();
+  btnCheck.disabled = false;
+  statusMsg.textContent = '사다리 설치 완료! "사다리 확인"을 눌러 경로를 확인하세요';
+});
+
+btnCheck.addEventListener('click', () => {
+  if (animating || !installed || checkIdx >= NUM) return;
+  animating = true;
+  btnCheck.disabled = true;
+  btnInstall.disabled = true;
+
+  const ci = checkIdx;
+  const color = COLORS[ci];
+  const { segments, endCol } = tracePath(ci);
+
+  statusMsg.textContent = `${inputs[ci].value || `참가자 ${ci+1}`} 경로 확인 중...`;
+
+  animatePath(segments, color, () => {
+    // Reveal gift
+    const gb = document.getElementById(`gift${endCol}`);
+    const gr = document.getElementById(`result${endCol}`);
+    const res = results[endCol];
+
+    gb.classList.add('boom');
+    setTimeout(() => {
+      gb.style.opacity = '0';
+      gr.textContent = res;
+      gr.classList.add('show');
+      gr.classList.add(res === '당첨' ? 'win' : 'lose');
+      if (res === '당첨') launchConfetti();
+    }, 450);
+
+    checkIdx++;
+    animating = false;
+
+    if (checkIdx < NUM) {
+      btnCheck.disabled = false;
+      statusMsg.textContent = `${inputs[ci].value || `참가자 ${ci+1}`} → ${res}! 다음 참가자를 확인하세요`;
+    } else {
+      btnInstall.disabled = false;
+      statusMsg.textContent = '🎉 게임 종료! 모든 참가자 확인 완료';
+      giftAssigned = false;
+    }
+  });
+});
+
+function launchConfetti() {
+  const wrap = document.getElementById('confettiWrap');
+  const pieces = 60;
+  const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c77dff','#ff9f7f','#fff'];
+  for (let i = 0; i < pieces; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left = (20 + Math.random() * 60) + '%';
+    el.style.top = '0';
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.transform = `rotate(${Math.random()*360}deg)`;
+    el.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+    el.style.animationDelay = (Math.random() * 0.6) + 's';
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+  }
+}
+
+// Initial draw
+draw();
+</script>
+</body>
+</html>
